@@ -50,12 +50,30 @@ int _strlength(char *s)
 
 /**
  * leaveshell - exits the shell program
- * @
+ * @dirlink: linked list of all direct in PATH
+ * @pathdir: all the directories in PATH not linklist
+ * @commpath: command attached to the PATH
  *
  *Return: void
  */
-void leaveshell()
+void leaveshell(char *pathdir, PATHDIR *dirlink, char *commpath)
 {
+	PATHDIR *tmp;
+	if(pathdir != NULL)
+		free(pathdir);
+
+	while(dirlink != NULL)
+	{
+		tmp = dirlink->next;
+		free(dirlink);
+		dirlink = tmp;
+	}
+	if(dirlink != NULL)
+		free(dirlink);
+
+	if(commpath != NULL)
+		free(commpath);
+
 	exit(100);
 }
 
@@ -158,7 +176,9 @@ PATHDIR *findpath(char *path)
 			temp->next = temp2;
 			temp = temp2;
 		}
+
 	}
+	temp->next = NULL;
 	return (head);
 }
 
@@ -174,6 +194,7 @@ char *searchcommand(PATHDIR *path, char *comm)
 	char *buff, *string;
 	unsigned int commlength, i, commit, strlength = 0;
 	struct stat st;
+	PATHDIR *tmp;
 
 	commlength = _strlength(comm);
 
@@ -185,16 +206,20 @@ char *searchcommand(PATHDIR *path, char *comm)
 		string = path->s;
 
 		strlength = _strlength(string);
+		if (strlength == 0)
+			return (NULL);
 
 		buff = malloc(sizeof(char *) * (strlength + commlength + 2));
 
 		if (buff == NULL)
 			return (0);
+
 		while (string[i] != '\0')
 		{
 			buff[i] = string[i];
 			i++;
 		}
+
 		buff[i++] = '/';
 
 		while(comm[commit] != '\0')
@@ -202,7 +227,6 @@ char *searchcommand(PATHDIR *path, char *comm)
 			buff[i] = comm[commit];
 			i++;
 			commit++;
-
 		}
 		buff[i] = '\0';
 
@@ -215,7 +239,8 @@ char *searchcommand(PATHDIR *path, char *comm)
 
 		path = path->next;
 	}
-	return (comm);
+
+	return (NULL);
 }
 
 /**
@@ -229,7 +254,7 @@ int main(void)
 	char *pathdir, *prompt = "($)", *commandtoks, *delim = " \n", **storetoken = NULL;
 	unsigned int i = 0, readline = 0, y = 0, spacecounter = 1;
 	PATHDIR *head = NULL;
-	char *commandinput = NULL, *commpath = NULL, leave[4] = "exit";
+	char *commandinput = NULL, *commpath = NULL;
 	size_t size = 0;
 	pid_t childpid;
 
@@ -253,19 +278,23 @@ int main(void)
 			return (0);
 
 		commandtoks = strtok(commandinput, delim);
-
+		if (commandtoks == NULL)
+		{
+			printf("\n");
+			return (-1);
+		}
 		storetoken[i++] = commandtoks;
 
-		while (commandtoks != NULL)
+		for (;commandtoks != NULL; i++)
 		{
 			commandtoks = strtok(NULL, delim);
-			storetoken[i++] = commandtoks;
+			storetoken[i] = commandtoks;
 		}
-		y = _strcmp(storetoken[0], leave);
 
-		if (_strcmp(storetoken[0], leave) == 0)
+
+		if (_strcmp(storetoken[0], "exit") == 0)
 		{
-			leaveshell(); /** change exit number*/
+			leaveshell(pathdir, head, commpath);
 		}
 		pathdir = _getenv(name);
 
@@ -275,12 +304,21 @@ int main(void)
 
 		childpid = fork();
 
+		if (childpid == -1)
+			leaveshell(pathdir, head, commpath);
+
 		if (childpid == 0)
 		{
 
-			execve(storetoken[0], storetoken, NULL);
+			if(commpath == NULL)
+			{
+				if (execve(storetoken[0], storetoken, NULL) == -1)
+					leaveshell(pathdir, head, commpath);
+			}
 
-			execve(commpath, storetoken, NULL);
+			if (execve(commpath, storetoken, NULL) == -1)
+				leaveshell(pathdir, head, commpath);
+
 			free(storetoken);
 			exit(98); /** may need to fix the exit number */
 		}
