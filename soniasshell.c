@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 typedef struct dir{
 	char *s;
@@ -23,6 +27,7 @@ int _strlength(char *s)
 
 	return (i);
 }
+
 /**
  * _getenv - finds the environment that matches the name
  *@name: name to look for in environment
@@ -104,6 +109,7 @@ PATHDIR *findpath(char *path)
 	head->s = token;
 
 	temp = head;
+
 	while (token != NULL)
 	{
 		token = strtok(NULL, delim);
@@ -116,7 +122,7 @@ PATHDIR *findpath(char *path)
 				return (0);
 
 			temp2->s = token;
-			temp->next = NULL;
+			temp2->next = NULL;
 			temp->next = temp2;
 			temp = temp2;
 		}
@@ -124,38 +130,89 @@ PATHDIR *findpath(char *path)
 	return (head);
 }
 /**
- * findcommand - finds the command in the path
- *@comm - first command inserted
+ * search command - finds the command in the path
+ *@comm: first command inserted
+ *@path: linked list of the path directories
  *
  *Return: the full path. Othwewise 0
  */
-char *findcommand(char *comm)
+char *searchcommand(PATHDIR *path, char *comm)
 {
+	char *buff, *string;
+	unsigned int commlength, i, commit, strlength = 0;
+	struct stat st;
+
+	commlength = _strlength(comm);
+
+	while(path != NULL)
+	{
+
+		commit = 0;
+		i = 0;
+		string = path->s;
+
+		strlength = _strlength(string);
+
+		buff = malloc(sizeof(char *) * (strlength + commlength + 2));
+
+		if (buff == NULL)
+			return (0);
+		while (string[i] != '\0')
+		{
+			buff[i] = string[i];
+			i++;
+		}
+		buff[i++] = '/';
+
+		while(comm[commit] != '\0')
+		{
+			buff[i] = comm[commit];
+			i++;
+			commit++;
+
+		}
+		buff[i] = '\0';
+
+		if (stat(buff, &st) == 0) /** success */
+		{
+			return (buff);
+		}
+
+		free(buff);
+
+		path = path->next;
+	}
+	return (comm);
 }
 /**
  * main - provides name to look for
  *
  *Return: 0
  */
-int main(char *argv)
+int main(void)
 {
 	const char *name = "PATH";
 	char *pathdir, *prompt = "($)", *commandtoks, *delim = " \n", **storetoken;
-	unsigned int i = 0, numread = 0;
-	PATHDIR *linklist;
-	char *commandinput, *commpath;
+	unsigned int i = 0, readline = 0;
+	PATHDIR *head = NULL;
+	char *commandinput = NULL, *commpath = NULL;
 	size_t size = 0;
 	pid_t childpid;
-	const char *hold = "/usr/local/bin";
+
 
 	while (1)
 	{
 		write(STDOUT_FILENO, prompt, 3);
 
-		numread = getline(&commandinput, &size, stdin);
+		i = 0;
+
+
+		readline = getline(&commandinput, &size, stdin);
 
 		commandtoks = strtok(commandinput, delim);
+
 		storetoken[i] = commandtoks;
+
 		i++;
 
 		while (commandtoks != NULL)
@@ -166,25 +223,25 @@ int main(char *argv)
 			i++;
 		}
 
+
 		pathdir = _getenv(name);
 
+		head = findpath(pathdir);
 
-/** create childPID so we are able to execute the command input while running this program*/
+
+		commpath = searchcommand(head, storetoken[0]);
 
 		childpid = fork();
 
 		if (childpid == 0)
 		{
 
-		if (execve(storetoken[0], storetoken, NULL) == -1)
-			printf("error\n");
+			execve(storetoken[0], storetoken, NULL);
 
+			execve(commpath, storetoken, NULL);
 		}
-
 		else
 			wait(NULL);
-
-
 	}
 	return (0);
 }
