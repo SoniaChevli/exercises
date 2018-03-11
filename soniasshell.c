@@ -7,6 +7,7 @@ typedef struct dir{
 	char *s;
 	struct dir *next;
 } PATHDIR;
+
 /**
  * _strlength - finds length of string
  *@s: string to find length of
@@ -57,13 +58,13 @@ char *_getenv(const char *name)
 
 				x = _strlength(s);
 
-				for(;s[i] != '='; x--, i++)
+				for(;s[i] != '='; x--, i++) /** see where the equal sign is past PATH*/
 					;
 
 				i++;
 				x--;
 
-				finalpath = malloc(sizeof(char *) * x);
+				finalpath = malloc(sizeof(char *) * x); /** finalpath is the path of directories without the PATH= */
 
 				if (finalpath == NULL)
 					return (0);
@@ -123,6 +124,15 @@ PATHDIR *findpath(char *path)
 	return (head);
 }
 /**
+ * findcommand - finds the command in the path
+ *@comm - first command inserted
+ *
+ *Return: the full path. Othwewise 0
+ */
+char *findcommand(char *comm)
+{
+}
+/**
  * main - provides name to look for
  *
  *Return: 0
@@ -130,10 +140,10 @@ PATHDIR *findpath(char *path)
 int main(char *argv)
 {
 	const char *name = "PATH";
-	char *pathdir, *prompt = "($)", *commandtoks, *delim = ":", **storetoken;
-	unsigned int i = 0;
+	char *pathdir, *prompt = "($)", *commandtoks, *delim = " \n", **storetoken;
+	unsigned int i = 0, numread = 0;
 	PATHDIR *linklist;
-	char *commandinput;
+	char *commandinput, *commpath;
 	size_t size = 0;
 	pid_t childpid;
 	const char *hold = "/usr/local/bin";
@@ -142,11 +152,12 @@ int main(char *argv)
 	{
 		write(STDOUT_FILENO, prompt, 3);
 
-		getline(&commandinput, &size, stdin);
-		printf("%s", commandinput);
+		numread = getline(&commandinput, &size, stdin);
+
 		commandtoks = strtok(commandinput, delim);
 		storetoken[i] = commandtoks;
 		i++;
+
 		while (commandtoks != NULL)
 		{
 
@@ -159,16 +170,19 @@ int main(char *argv)
 
 
 /** create childPID so we are able to execute the command input while running this program*/
-/**		childpid = fork();
-		if (childpid = -1)
-		return (0);
-		if (childpid = 0)
+
+		childpid = fork();
+
+		if (childpid == 0)
 		{
 
-		printf("Inside childprocess\n");
+		if (execve(storetoken[0], storetoken, NULL) == -1)
+			printf("error\n");
+
 		}
+
 		else
-		wait(NULL);*/
+			wait(NULL);
 
 
 	}
