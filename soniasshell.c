@@ -11,7 +11,27 @@ typedef struct dir{
 	char *s;
 	struct dir *next;
 } PATHDIR;
-
+/**
+ * _strcmp - compares 2 strings to see if theyre the same
+ *@s1: first string
+ *@s2: second string
+ *
+ *Return: 0 if successful. Otherwise -1
+ */
+int _strcmp(char *s1, char *s2)
+{
+	unsigned int i = 0, j = 0;
+	while(s1[i] != '\0' && s2[j] != '\0')
+	{
+		if (s2[i] != s1[j])
+			return (-1);
+		i++;
+		j++;
+	}
+	if (s1[i] == '\0' && s2[j] == '\0')
+		return (0);
+	return (-1);
+}
 /**
  * _strlength - finds length of string
  *@s: string to find length of
@@ -209,7 +229,7 @@ int main(void)
 	char *pathdir, *prompt = "($)", *commandtoks, *delim = " \n", **storetoken = NULL;
 	unsigned int i = 0, readline = 0, y = 0, spacecounter = 1;
 	PATHDIR *head = NULL;
-	char *commandinput = NULL, *commpath = NULL;
+	char *commandinput = NULL, *commpath = NULL, leave[4] = "exit";
 	size_t size = 0;
 	pid_t childpid;
 
@@ -219,15 +239,12 @@ int main(void)
 
 		i = 0;
 
-
 		readline = getline(&commandinput, &size, stdin);
-		while(commandinput[y] != '\0')
-		{
 
+		for (y = 0; commandinput[y] != '\0'; y++)
+		{
 			if (commandinput[y] == ' ')
 				spacecounter++;
-
-			y++;
 		}
 
 		storetoken = malloc((1 + spacecounter) * sizeof(char *));
@@ -237,21 +254,22 @@ int main(void)
 
 		commandtoks = strtok(commandinput, delim);
 
-		storetoken[i] = commandtoks;
-		i++;
+		storetoken[i++] = commandtoks;
 
 		while (commandtoks != NULL)
 		{
-
 			commandtoks = strtok(NULL, delim);
-			storetoken[i] = commandtoks;
-			i++;
+			storetoken[i++] = commandtoks;
 		}
+		y = _strcmp(storetoken[0], leave);
 
+		if (_strcmp(storetoken[0], leave) == 0)
+		{
+			leaveshell(); /** change exit number*/
+		}
 		pathdir = _getenv(name);
 
 		head = findpath(pathdir);
-
 
 		commpath = searchcommand(head, storetoken[0]);
 
@@ -264,7 +282,7 @@ int main(void)
 
 			execve(commpath, storetoken, NULL);
 			free(storetoken);
-			exit(98);
+			exit(98); /** may need to fix the exit number */
 		}
 		else
 			wait(NULL);
