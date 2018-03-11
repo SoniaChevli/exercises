@@ -29,6 +29,17 @@ int _strlength(char *s)
 }
 
 /**
+ * leaveshell - exits the shell program
+ * @
+ *
+ *Return: void
+ */
+void leaveshell()
+{
+	exit(100);
+}
+
+/**
  * _getenv - finds the environment that matches the name
  *@name: name to look for in environment
  *
@@ -87,6 +98,7 @@ char *_getenv(const char *name)
 	}
 	return (0);
 }
+
 /**
  * findpath - prints each directory onto its own line
  *@fullpath - full path that needs to be split
@@ -129,8 +141,9 @@ PATHDIR *findpath(char *path)
 	}
 	return (head);
 }
+
 /**
- * search command - finds the command in the path
+ * searchcommand - finds the command in the path
  *@comm: first command inserted
  *@path: linked list of the path directories
  *
@@ -184,6 +197,7 @@ char *searchcommand(PATHDIR *path, char *comm)
 	}
 	return (comm);
 }
+
 /**
  * main - provides name to look for
  *
@@ -191,14 +205,13 @@ char *searchcommand(PATHDIR *path, char *comm)
  */
 int main(void)
 {
-	const char *name = "PATH";
-	char *pathdir, *prompt = "($)", *commandtoks, *delim = " \n", **storetoken;
-	unsigned int i = 0, readline = 0;
+	char *name = "PATH";
+	char *pathdir, *prompt = "($)", *commandtoks, *delim = " \n", **storetoken = NULL;
+	unsigned int i = 0, readline = 0, y = 0, spacecounter = 1;
 	PATHDIR *head = NULL;
 	char *commandinput = NULL, *commpath = NULL;
 	size_t size = 0;
 	pid_t childpid;
-
 
 	while (1)
 	{
@@ -208,11 +221,23 @@ int main(void)
 
 
 		readline = getline(&commandinput, &size, stdin);
+		while(commandinput[y] != '\0')
+		{
+
+			if (commandinput[y] == ' ')
+				spacecounter++;
+
+			y++;
+		}
+
+		storetoken = malloc((1 + spacecounter) * sizeof(char *));
+
+		if (storetoken == NULL)
+			return (0);
 
 		commandtoks = strtok(commandinput, delim);
 
 		storetoken[i] = commandtoks;
-
 		i++;
 
 		while (commandtoks != NULL)
@@ -222,7 +247,6 @@ int main(void)
 			storetoken[i] = commandtoks;
 			i++;
 		}
-
 
 		pathdir = _getenv(name);
 
@@ -239,9 +263,12 @@ int main(void)
 			execve(storetoken[0], storetoken, NULL);
 
 			execve(commpath, storetoken, NULL);
+			free(storetoken);
+			exit(98);
 		}
 		else
 			wait(NULL);
+
 	}
 	return (0);
 }
